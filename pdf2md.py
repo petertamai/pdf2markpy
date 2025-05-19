@@ -93,8 +93,27 @@ def process_text_to_markdown(text):
     # Simple processing - just return the extracted text
     return text
 
+# Truncate markdown to specified number of words
+def truncate_markdown(markdown, truncate_to=None):
+    if truncate_to is None or truncate_to <= 0:
+        # Return full markdown if truncate_to is None or invalid
+        return markdown
+    
+    words = markdown.split()
+    if len(words) <= truncate_to:
+        # No need to truncate
+        return markdown
+    
+    # Truncate to specified number of words
+    truncated = ' '.join(words[:truncate_to])
+    
+    # Add note about truncation
+    truncated += f"\n\n... (Truncated to {truncate_to} words out of approximately {len(words)} total words)"
+    
+    return truncated
+
 # Convert PDF to Markdown
-def pdf_to_markdown(pdf_path):
+def pdf_to_markdown(pdf_path, truncate_to=3000):
     logger.info(f"Converting PDF to Markdown: {pdf_path}")
     
     # Extract text
@@ -103,6 +122,11 @@ def pdf_to_markdown(pdf_path):
     if text:
         # Process to markdown
         markdown = process_text_to_markdown(text)
+        
+        # Truncate if needed (default 3000 words if not specified)
+        if truncate_to != 'none':
+            markdown = truncate_markdown(markdown, truncate_to)
+            
         return markdown
     else:
         logger.error("Failed to extract text from PDF")
@@ -124,12 +148,26 @@ def convert_url():
     if not url:
         return jsonify({'error': 'URL parameter is required'}), 400
     
+    # Get truncate_to parameter, default is 3000
+    truncate_to_param = request.args.get('truncate_to', '3000')
+    
+    # Parse truncate_to parameter
+    if truncate_to_param.lower() == 'none':
+        truncate_to = 'none'  # Special value to indicate no truncation
+    else:
+        try:
+            truncate_to = int(truncate_to_param)
+            if truncate_to <= 0:
+                truncate_to = 3000  # Default if invalid value
+        except ValueError:
+            truncate_to = 3000  # Default if not a valid integer
+    
     try:
         # Download the PDF
         pdf_path = download_pdf(url)
         
         # Convert to Markdown
-        markdown = pdf_to_markdown(pdf_path)
+        markdown = pdf_to_markdown(pdf_path, truncate_to)
         
         # Clean up
         try:
@@ -155,6 +193,20 @@ def convert_batch():
     if not urls or not isinstance(urls, list):
         return jsonify({'error': 'Array of URLs is required in the "urls" field'}), 400
     
+    # Get truncate_to parameter, default is 3000
+    truncate_to_param = data.get('truncate_to', '3000')
+    
+    # Parse truncate_to parameter
+    if truncate_to_param == 'none' or truncate_to_param is None:
+        truncate_to = 'none'  # Special value to indicate no truncation
+    else:
+        try:
+            truncate_to = int(truncate_to_param)
+            if truncate_to <= 0:
+                truncate_to = 3000  # Default if invalid value
+        except (ValueError, TypeError):
+            truncate_to = 3000  # Default if not a valid integer
+    
     combined_markdown = ""
     
     for url in urls:
@@ -166,7 +218,7 @@ def convert_batch():
             pdf_path = download_pdf(url)
             
             # Convert to Markdown
-            markdown = pdf_to_markdown(pdf_path)
+            markdown = pdf_to_markdown(pdf_path, truncate_to)
             
             # Clean up
             try:

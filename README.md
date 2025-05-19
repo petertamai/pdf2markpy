@@ -6,6 +6,7 @@ A simple REST API service that converts PDFs to Markdown format. It supports bot
 
 - Convert PDF from URL to Markdown text
 - Batch convert multiple PDFs and combine them into a single Markdown document
+- Truncate output to a specific number of words (customizable)
 - Clean, simple API designed for easy integration
 - Docker support for easy deployment
 - Designed to be reliable and maintainable
@@ -25,8 +26,12 @@ Response:
 
 ### Single PDF Conversion
 ```
-GET /convert?url=https://example.com/document.pdf
+GET /convert?url=https://example.com/document.pdf&truncate_to=3000
 ```
+Parameters:
+- `url` (required): URL of the PDF to convert
+- `truncate_to` (optional): Maximum number of words to include (default: 3000, use 'none' for entire document)
+
 Response: Plain Markdown text
 
 ### Batch PDF Conversion
@@ -38,9 +43,14 @@ Content-Type: application/json
   "urls": [
     "https://example.com/document1.pdf",
     "https://example.com/document2.pdf"
-  ]
+  ],
+  "truncate_to": "none"
 }
 ```
+Parameters:
+- `urls` (required): Array of PDF URLs to convert
+- `truncate_to` (optional): Maximum number of words per document (default: 3000, use 'none' for entire documents)
+
 Response: Combined Markdown text with source URL headers
 
 ## Deployment
@@ -77,9 +87,19 @@ docker run -p 3000:3000 pdf2markdown
 curl "http://localhost:3000/convert?url=https://example.com/document.pdf"
 ```
 
-2. Batch convert multiple PDFs:
+2. Convert a single PDF with custom truncation:
 ```bash
-curl -X POST -H "Content-Type: application/json" -d '{"urls":["https://example.com/document1.pdf","https://example.com/document2.pdf"]}' http://localhost:3000/convert/batch
+curl "http://localhost:3000/convert?url=https://example.com/document.pdf&truncate_to=500"
+```
+
+3. Convert a single PDF with no truncation:
+```bash
+curl "http://localhost:3000/convert?url=https://example.com/document.pdf&truncate_to=none"
+```
+
+4. Batch convert multiple PDFs:
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"urls":["https://example.com/document1.pdf","https://example.com/document2.pdf"],"truncate_to":1000}' http://localhost:3000/convert/batch
 ```
 
 ### Integration with n8n
@@ -93,7 +113,8 @@ For the batch endpoint in n8n:
    - JSON content:
    ```json
    {
-     "urls": {{$json.output.pdf_results.map(item => item.url)}}
+     "urls": {{$json.output.pdf_results.map(item => item.url)}},
+     "truncate_to": 2000
    }
    ```
 

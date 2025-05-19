@@ -36,14 +36,23 @@ Convert a single PDF from a URL to Markdown.
 
 **Request:**
 ```
-GET /convert?url=https://example.com/document.pdf
+GET /convert?url=https://example.com/document.pdf&truncate_to=3000
 ```
 
 **Parameters:**
 - `url` (required): URL of the PDF to convert
+- `truncate_to` (optional): Maximum number of words to include in the output
+  - Default: 3000
+  - Set to 'none' to return the entire document with no truncation
+  - Integer values <= 0 will use the default (3000)
 
 **Response:**
 Markdown text with Content-Type: text/markdown
+
+If truncated, a note will be added at the end:
+```
+... (Truncated to 3000 words out of approximately 5000 total words)
+```
 
 **Status Codes:**
 - `200 OK`: Conversion successful
@@ -63,12 +72,17 @@ Content-Type: application/json
   "urls": [
     "https://example.com/document1.pdf",
     "https://example.com/document2.pdf"
-  ]
+  ],
+  "truncate_to": 3000
 }
 ```
 
 **Request Body:**
 - `urls` (required): Array of PDF URLs to convert
+- `truncate_to` (optional): Maximum number of words per document
+  - Default: 3000
+  - Set to 'none' to return the entire documents with no truncation
+  - Integer values <= 0 will use the default (3000)
 
 **Response:**
 Combined Markdown text with Content-Type: text/markdown
@@ -108,6 +122,7 @@ Error processing this PDF: Failed to download PDF: 404 Client Error: Not Found f
 - The service processes PDFs one at a time
 - Large PDFs may take longer to process
 - Temporary files are automatically cleaned up after 1 hour
+- The truncation feature can improve performance for very large documents
 
 ## Security Considerations
 
